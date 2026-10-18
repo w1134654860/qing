@@ -1,0 +1,53 @@
+# 构建无签名 iOS IPA（供 TrollStore / 巨魔 侧载安装）
+# 触发方式：GitHub 仓库页面 → Actions → “iOS Unsigned IPA (TrollStore)” → Run workflow
+# 产物：Payload 结构的 .ipa（未经 Apple 签名），巨魔安装后由 TrollStore 本地重签名
+name: iOS Unsigned IPA (TrollStore)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['master', 'main']
+    paths: ['lib/**', 'ios/**', 'assets/**', 'shaders/**', 'third_party/**', 'pubspec.*', '.github/workflows/ios-unsigned.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios-unsigned:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Flutter 3.41.5
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.5'
+          channel: stable
+          cache: true
+
+      - name: Ensure CocoaPods
+        run: |
+          gem install cocoapods --no-document || true
+          pod --version
+
+      - name: Fetch dependencies
+        run: flutter pub get
+
+      - name: Build unsigned iOS release
+        run: flutter build ios --release --no-codesign
+
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qry wenku8-ios-0.3.7-unsigned.ipa Payload
+          ls -lh wenku8-ios-0.3.7-unsigned.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wenku8-ios-unsigned-ipa
+          path: wenku8-ios-0.3.7-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
