@@ -10,7 +10,7 @@ on:
     paths: ['lib/**', 'ios/**', 'assets/**', 'shaders/**', 'third_party/**', 'pubspec.*', '.github/workflows/ios-unsigned.yml']
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-ios-unsigned:
@@ -51,3 +51,19 @@ jobs:
           path: wenku8-ios-0.3.7-unsigned.ipa
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish GitHub Release (TrollStore IPA)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="ios-0.3.7"
+          # 若已存在同名 Release，先删除（含 tag），保证始终只有一个最新版
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release delete "$TAG" --repo "${{ github.repository }}" --yes --cleanup-tag
+          fi
+          gh release create "$TAG" wenku8-ios-0.3.7-unsigned.ipa \
+            --repo "${{ github.repository }}" \
+            --title "Wenku8 Flutter 0.3.7 · iOS（巨魔安装，无签名）" \
+            --notes "自动构建产物 · Flutter 3.41.5 · 未签名 IPA，仅限 TrollStore/巨魔侧载安装。部署目标 iOS 13.0。" \
+            --latest
