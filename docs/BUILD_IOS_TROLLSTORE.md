@@ -7,7 +7,7 @@
 
 iOS 应用必须由 **macOS + Xcode** 编译（`flutter build ios` 只在 macOS 上可用）。
 本仓库所在电脑为 Windows，无法本地产出 IPA。以下三种途径任选其一，
-最终得到的都是同一个 `wenku8-ios-0.3.7-unsigned.ipa`，巨魔可直接安装。
+最终得到的都是同一个 `wenku8-ios-0.3.7-fixed.ipa`（修复版，tag `ios-0.3.7-fixed`），巨魔可直接安装。
 
 ## 已完成的 iOS 适配改动（本仓库内）
 
@@ -29,7 +29,7 @@ iOS 应用必须由 **macOS + Xcode** 编译（`flutter build ios` 只在 macOS 
 3. 打开仓库 → **Actions** → 左侧 **iOS Unsigned IPA (TrollStore)** → **Run workflow**。
 4. 等待约 10–15 分钟（macOS runner 首次会缓存 Flutter 与 CocoaPods）。
 5. 构建完成后，点击本次运行 → 底部 **Artifacts** → 下载 `wenku8-ios-unsigned-ipa`。
-6. 解压得到 `wenku8-ios-0.3.7-unsigned.ipa`。
+6. 解压得到 `wenku8-ios-0.3.7-fixed.ipa`。
 
 > 提示：也可直接 fork 上游仓库 `mikufoxxx/Wenku8_Flutter`，把本仓库的
 > `ios-unsigned.yml` 与 `Info.plist` 改动合入后推送，工作流即可随 push 自动触发。
@@ -45,7 +45,7 @@ iOS 应用必须由 **macOS + Xcode** 编译（`flutter build ios` 只在 macOS 
 3. 把 `build/ios/iphoneos/Runner.app` 打包为 Payload 结构的 IPA：
    ```sh
    mkdir Payload && cp -R build/ios/iphoneos/Runner.app Payload/
-   zip -qry wenku8-ios-0.3.7-unsigned.ipa Payload
+   zip -qry wenku8-ios-0.3.7-fixed.ipa Payload
    ```
 4. 在 artifacts 中下载 IPA。
 
@@ -56,14 +56,14 @@ cd 本仓库目录
 flutter pub get
 flutter build ios --release --no-codesign
 mkdir Payload && cp -R build/ios/iphoneos/Runner.app Payload/
-zip -qry wenku8-ios-0.3.7-unsigned.ipa Payload
+zip -qry wenku8-ios-0.3.7-fixed.ipa Payload
 ```
 
 ---
 
 ## 用巨魔安装
 
-1. 把 `wenku8-ios-0.3.7-unsigned.ipa` 传到手机（隔空投送 / 网盘下载均可）。
+1. 把 `wenku8-ios-0.3.7-fixed.ipa` 传到手机（隔空投送 / 网盘下载均可）。
 2. 在 **TrollStore** 中打开该 IPA，点 **Install**。
 3. 安装完成后桌面出现 **Wenku8 Flutter** 图标，直接使用。
 

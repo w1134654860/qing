@@ -1,6 +1,7 @@
 # 构建无签名 iOS IPA（供 TrollStore / 巨魔 侧载安装）
 # 触发方式：GitHub 仓库页面 → Actions → “iOS Unsigned IPA (TrollStore)” → Run workflow
 # 产物：Payload 结构的 .ipa（未经 Apple 签名），巨魔安装后由 TrollStore 本地重签名
+# 版本：0.3.7+64 修复版（纯 Dart 在线桥）。tag/文件名带 -fixed，与旧版 ios-0.3.7 区分。
 name: iOS Unsigned IPA (TrollStore)
 
 on:
@@ -41,14 +42,14 @@ jobs:
           set -euo pipefail
           mkdir -p Payload
           cp -R build/ios/iphoneos/Runner.app Payload/
-          zip -qry wenku8-ios-0.3.7-unsigned.ipa Payload
-          ls -lh wenku8-ios-0.3.7-unsigned.ipa
+          zip -qry wenku8-ios-0.3.7-fixed.ipa Payload
+          ls -lh wenku8-ios-0.3.7-fixed.ipa
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: wenku8-ios-unsigned-ipa
-          path: wenku8-ios-0.3.7-unsigned.ipa
+          path: wenku8-ios-0.3.7-fixed.ipa
           if-no-files-found: error
           retention-days: 14
 
@@ -57,13 +58,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="ios-0.3.7"
-          # 若已存在同名 Release，先删除（含 tag），保证始终只有一个最新版
+          TAG="ios-0.3.7-fixed"
+          # 若已存在同名 Release，先删除（含 tag），保证该 tag 始终只有一个最新版
           if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             gh release delete "$TAG" --repo "${{ github.repository }}" --yes --cleanup-tag
           fi
-          gh release create "$TAG" wenku8-ios-0.3.7-unsigned.ipa \
+          gh release create "$TAG" wenku8-ios-0.3.7-fixed.ipa \
             --repo "${{ github.repository }}" \
-            --title "Wenku8 Flutter 0.3.7 · iOS（巨魔安装，无签名）" \
-            --notes "自动构建产物 · Flutter 3.41.5 · 未签名 IPA，仅限 TrollStore/巨魔侧载安装。部署目标 iOS 13.0。" \
+            --title "Wenku8 Flutter 0.3.7 (64) · iOS 修复版（巨魔安装，无签名）" \
+            --notes "修复版：iOS 在线功能（书库/更新/正文/登录/出版目录）改为纯 Dart 桥实现，appver 算法复刻闭源 libcpp.so。未签名 IPA，仅限 TrollStore/巨魔侧载安装。部署目标 iOS 13.0。" \
             --latest
