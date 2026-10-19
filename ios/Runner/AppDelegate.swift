@@ -45,9 +45,12 @@ private func swizzleStatusBarAppearance() {
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     swizzleStatusBarAppearance()
+    guard let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "wenku8-ios-system") else {
+      return
+    }
     let channel = FlutterMethodChannel(
       name: "org.mewx.wenku8/ios_system",
-      binaryMessenger: engineBridge.pluginRegistry.messenger()!)
+      binaryMessenger: registrar.messenger())
     channel.setMethodCallHandler { [weak self] call, result in
       guard let self = self else {
         result(FlutterError(code: "unavailable", message: "AppDelegate 已释放", details: nil))
