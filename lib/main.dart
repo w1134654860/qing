@@ -56,44 +56,39 @@ Future<void> main() async {
       WidgetsBinding.instance.platformDispatcher.platformBrightness,
   };
   SystemChrome.setSystemUIOverlayStyle(novelSystemUiStyle(brightness));
-  final account = defaultTargetPlatform == TargetPlatform.android
-      ? WenkuAccount()
-      : null;
+  final account = WenkuAccount();
   final remote = LegacyWenkuRepository(
-    publicationRequest: account?.readPublication,
-    publicationSessionKey: account == null
-        ? null
-        : () => (
-            account.sessionRevision,
-            account.publicationRevision,
-            account.authenticated,
-          ),
+    publicationRequest: account.readPublication,
+    publicationSessionKey: () => (
+      account.sessionRevision,
+      account.publicationRevision,
+      account.authenticated,
+    ),
   );
-  final repository = defaultTargetPlatform == TargetPlatform.android
-      ? OfflineNovelRepository(
-          remote: remote,
-          cache: await OfflineCacheStore.forApp(),
-          local: await LocalBookStore.forApp(),
-          network: network,
-        )
-      : const DemoNovelRepository();
-  if (repository is OfflineNovelRepository && repository.local != null) {
+  // iOS keeps the same online repository as Android: the legacy transport
+  // falls back to the pure-Dart bridge when the native plugin is missing,
+  // and the offline cache/local stores are plain files under path_provider.
+  final repository = OfflineNovelRepository(
+    remote: remote,
+    cache: await OfflineCacheStore.forApp(),
+    local: await LocalBookStore.forApp(),
+    network: network,
+  );
+  if (repository.local != null) {
     await reconcileLocalSeries(repository.local!, state);
   }
-  final features = account != null
-      ? WenkuFeatures(
-          account: account,
-          // The authenticated novellist response already contains book metadata.
-          // Reuse its adapter, pagination and the existing account session.
-          publications: remote,
-          shelfSync: WenkuShelfSync(
-            account: account,
-            library: state,
-            preferences: await SharedPreferences.getInstance(),
-            network: network,
-          )..start(),
-        )
-      : null;
+  final features = WenkuFeatures(
+    account: account,
+    // The authenticated novellist response already contains book metadata.
+    // Reuse its adapter, pagination and the existing account session.
+    publications: remote,
+    shelfSync: WenkuShelfSync(
+      account: account,
+      library: state,
+      preferences: await SharedPreferences.getInstance(),
+      network: network,
+    )..start(),
+  );
   final customSpeech = defaultTargetPlatform == TargetPlatform.android
       ? CustomSpeechSettings()
       : null;
