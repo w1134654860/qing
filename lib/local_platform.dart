@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'ios_system.dart';
 import 'library_state.dart';
 import 'reader_preferences.dart';
 
@@ -49,7 +50,16 @@ abstract final class LocalPlatform {
     required LibraryState state,
     ValueChanged<int>? onPage,
   }) {
-    if (!android) return;
+    if (!android) {
+      // iOS：通过 ios_system 通道真正隐藏/恢复系统状态栏；
+      // Web 无此能力，保持原样。
+      if (IosSystem.active) {
+        IosSystem.setStatusBarHidden(
+          active && state.readerPreferences.hideSystemStatus,
+        );
+      }
+      return;
+    }
     if (active) {
       _readerOwner = owner;
       _onPage = onPage;

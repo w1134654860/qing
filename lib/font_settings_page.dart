@@ -5,6 +5,7 @@ import 'app_typography.dart';
 import 'app_ui.dart';
 import 'book_documents.dart';
 import 'feature_pages.dart' show confirmNovelAction;
+import 'ios_system.dart';
 import 'library_state.dart';
 import 'user_fonts.dart';
 
@@ -84,7 +85,9 @@ class _FontSettingsPageState extends State<FontSettingsPage> {
   }
 
   Future<void> _import() => _perform(() async {
-    final selected = await documents.pickFont();
+    final selected = IosSystem.active
+        ? await IosSystem.pickFont()
+        : await documents.pickFont();
     if (selected == null) return;
     try {
       final font = await widget.state.fonts.importFile(
@@ -95,7 +98,9 @@ class _FontSettingsPageState extends State<FontSettingsPage> {
         showNovelFeedback(context, '已导入 ${font.name}，可分别设为 App 或阅读器字体');
       }
     } finally {
-      await documents.releaseBooks([selected]);
+      if (!IosSystem.active) {
+        await documents.releaseBooks([selected]);
+      }
     }
   });
   Future<void> _delete(UserFont font) async {

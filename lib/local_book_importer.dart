@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app_interactions.dart';
@@ -6,6 +7,7 @@ import 'book_documents.dart';
 import 'catalog.dart';
 import 'cloud_library_page.dart';
 import 'cloud_sources.dart';
+import 'ios_system.dart';
 import 'library_state.dart';
 import 'local_books.dart';
 import 'local_book_scanner.dart';
@@ -42,7 +44,8 @@ class LocalBookImporter extends ChangeNotifier {
       WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
 
   Future<void> scanOnEntry(BuildContext context, {bool resumed = false}) async {
-    if (!_foreground ||
+    if (IosSystem.active ||
+        !_foreground ||
         busy ||
         _disposed ||
         _scanning ||
@@ -91,16 +94,19 @@ class LocalBookImporter extends ChangeNotifier {
             label: '导入书籍',
             onPressed: () => Navigator.pop(menu, 'local'),
           ),
-          GlassMenuItem(
-            order: 1,
-            label: '从网盘导入',
-            onPressed: () => Navigator.pop(menu, 'cloud'),
-          ),
-          GlassMenuItem(
-            order: 2,
-            label: '扫描本地文件夹',
-            onPressed: () => Navigator.pop(menu, 'scan'),
-          ),
+          // iOS 无 SAF：文件夹扫描与网盘原生通道不可用，只保留文件选择导入。
+          if (!IosSystem.active)
+            GlassMenuItem(
+              order: 1,
+              label: '从网盘导入',
+              onPressed: () => Navigator.pop(menu, 'cloud'),
+            ),
+          if (!IosSystem.active)
+            GlassMenuItem(
+              order: 2,
+              label: '扫描本地文件夹',
+              onPressed: () => Navigator.pop(menu, 'scan'),
+            ),
           if (management)
             GlassMenuItem(
               order: 3,
@@ -160,8 +166,14 @@ class LocalBookImporter extends ChangeNotifier {
           item.path ?? 'error:${item.name}': item,
       };
       try {
-        await documents.releaseBooks(cleanup.values);
-        stagingReleased = true;
+        if (IosSystem.active) {
+          // iOS 文件由 UIDocumentPicker 以副本形式复制进沙盒，
+          // 没有 Android 的安全作用域需要释放。
+          stagingReleased = true;
+        } else {
+          await documents.releaseBooks(cleanup.values);
+          stagingReleased = true;
+        }
       } catch (_) {
         /* Durable imports stay readable even if cache cleanup fails. */
       }
@@ -178,14 +190,24 @@ class LocalBookImporter extends ChangeNotifier {
         late Novel imported;
         try {
           if (name.toLowerCase().endsWith('.txt')) {
-            decoded = await documents.decodeTextFile(path, encoding: encoding);
+            decoded = IosSystem.active
+                ? await IosSystem.decodeTextFile(path, encoding: encoding)
+                : await documents.decodeTextFile(path, encoding: encoding);
           }
           imported = await books.importFile(name, path, decodedPath: decoded);
         } finally {
           if (decoded != null) {
-            await documents.releaseBooks([
-              BookDocumentSelection(name: 'decoded.txt', path: decoded),
-            ]);
+            if (IosSystem.active) {
+              try {
+                await File(decoded).delete();
+              } catch (_) {
+                /* 临时解码文件清理失败不影响已导入的书籍 */
+              }
+            } else {
+              await documents.releaseBooks([
+                BookDocumentSelection(name: 'decoded.txt', path: decoded),
+              ]);
+            }
           }
         }
         final parent = books.seriesFor(imported.id);
@@ -208,6 +230,15 @@ class LocalBookImporter extends ChangeNotifier {
       }) async {
         final prepared = <BookDocumentSelection>[];
         for (final source in sources) {
+          // iOS 无原生转码通道：非 TXT/EPUB 直接给出错误项，不中断整批。
+          if (IosSystem.active &&
+              !RegExp(
+                r'\.(txt|epub)$',
+                caseSensitive: false,
+              ).hasMatch(source.name)) {
+            prepared.add(IosSystem.unsupported(source.name));
+            continue;
+          }
           final items = await documents.prepareBook(source);
           prepared.addAll(items);
           staged.addAll(
@@ -331,7 +362,9 @@ class LocalBookImporter extends ChangeNotifier {
           );
         }
       } else {
-        selections = await documents.pickBooks();
+        selections = IosSystem.active
+            ? await IosSystem.pickBooks()
+            : await documents.pickBooks();
         if (selections.isEmpty || !context.mounted || _disposed) return;
         progress = (0, selections.length);
         _changed();

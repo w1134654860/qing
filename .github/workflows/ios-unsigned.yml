@@ -1,7 +1,7 @@
 # 构建无签名 iOS IPA（供 TrollStore / 巨魔 侧载安装）
 # 触发方式：GitHub 仓库页面 → Actions → “iOS Unsigned IPA (TrollStore)” → Run workflow
 # 产物：Payload 结构的 .ipa（未经 Apple 签名），巨魔安装后由 TrollStore 本地重签名
-# 版本：0.3.7+64 修复版（纯 Dart 在线桥）。tag/文件名带 -fixed，与旧版 ios-0.3.7 区分。
+# 版本：0.3.8+65（iOS 修复版：本地图书导入 + 隐藏状态栏）。tag/文件名带版本号延续。
 name: iOS Unsigned IPA (TrollStore)
 
 on:
@@ -42,14 +42,14 @@ jobs:
           set -euo pipefail
           mkdir -p Payload
           cp -R build/ios/iphoneos/Runner.app Payload/
-          zip -qry wenku8-ios-0.3.7-fixed.ipa Payload
-          ls -lh wenku8-ios-0.3.7-fixed.ipa
+          zip -qry wenku8-ios-0.3.8.ipa Payload
+          ls -lh wenku8-ios-0.3.8.ipa
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: wenku8-ios-unsigned-ipa
-          path: wenku8-ios-0.3.7-fixed.ipa
+          path: wenku8-ios-0.3.8.ipa
           if-no-files-found: error
           retention-days: 14
 
@@ -58,13 +58,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="ios-0.3.7-fixed"
+          TAG="ios-0.3.8"
           # 若已存在同名 Release，先删除（含 tag），保证该 tag 始终只有一个最新版
           if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             gh release delete "$TAG" --repo "${{ github.repository }}" --yes --cleanup-tag
           fi
-          gh release create "$TAG" wenku8-ios-0.3.7-fixed.ipa \
+          gh release create "$TAG" wenku8-ios-0.3.8.ipa \
             --repo "${{ github.repository }}" \
-            --title "Wenku8 Flutter 0.3.7 (64) · iOS 修复版（巨魔安装，无签名）" \
-            --notes "修复版：iOS 在线功能（书库/更新/正文/登录/出版目录）改为纯 Dart 桥实现，appver 算法复刻闭源 libcpp.so。未签名 IPA，仅限 TrollStore/巨魔侧载安装。部署目标 iOS 13.0。" \
+            --title "Wenku8 Flutter 0.3.8 (65) · iOS 修复版（巨魔安装，无签名）" \
+            --notes "## 更新日志（0.3.8+65）
+
+### 🐛 修复
+- **本地图书导入（iOS）**：新增 iOS 原生文件选择器（UIDocumentPicker），适配 TXT / EPUB / PDF / MOBI / ZIP 选择导入；TXT 内置编码探测（UTF-8 / UTF-16 / GB18030 / GBK），乱码问题一并解决。
+- **隐藏系统状态栏（iOS）**：阅读设置 → 操作 → “隐藏系统状态栏”开关现在真正生效，阅读页进入全屏沉浸状态。
+- iOS 端隐藏不可用的“从网盘导入 / 扫描本地文件夹”菜单，避免误触报错。
+
+### ✨ 沿用上一版修复
+- iOS 在线功能（书库 / 更新 / 正文 / 搜索 / 登录 / 出版目录）为纯 Dart 桥实现，appver 算法已复刻。
+
+未签名 IPA，仅限 TrollStore/巨魔侧载安装。部署目标 iOS 13.0。" \
             --latest
